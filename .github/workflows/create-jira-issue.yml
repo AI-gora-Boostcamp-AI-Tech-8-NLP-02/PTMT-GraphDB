@@ -1,0 +1,139 @@
+name: Create Jira issue
+on:
+  issues:
+    types:
+      - opened
+
+jobs:
+  issue-sync:
+    name: Create Jira issue
+    runs-on: ubuntu-latest
+    env:
+      JIRA_BASE_URL: ${{ secrets.JIRA_BASE_URL }}
+      JIRA_API_TOKEN: ${{ secrets.JIRA_API_TOKEN }}
+      JIRA_USER_EMAIL: ${{ secrets.JIRA_USER_EMAIL }}
+      PROJECT_KEY: ${{ secrets.PROJECT_KEY }}
+
+    steps:
+      - name: JIRA Login
+        run: |
+          curl --fail --request GET \
+          --url "https://${JIRA_BASE_URL}/rest/api/3/myself" \
+          --user "${JIRA_USER_EMAIL}:${JIRA_API_TOKEN}" \
+          --header "Accept: application/json"
+
+      - name: Checkout main code
+        uses: actions/checkout@v4
+        with:
+          ref: main
+        
+      - name: Issue Parser
+        uses: stefanbuck/github-issue-parser@v3
+        id: issue-parser
+        with:
+          template-path: .github/ISSUE_TEMPLATE/issue-form.yml
+      
+      - name: Create JIRA issue
+        id: create
+        run: |
+          response=$(curl --request POST \
+            --url "https://${JIRA_BASE_URL}/rest/api/3/issue" \
+            --user "${JIRA_USER_EMAIL}:${JIRA_API_TOKEN}" \
+            --header "Accept: application/json" \
+            --header "Content-Type: application/json" \
+            --data "{
+              \"fields\": {
+                \"issuetype\": {
+                  \"name\": \"Task\"
+                },
+                \"parent\": {
+                  \"key\": \"${{ steps.issue-parser.outputs.issueparser_parentKey }}\"
+                },
+                \"project\": {
+                  \"key\": \"${PROJECT_KEY}\"
+                },
+                \"summary\": \"${{ github.event.issue.title }}\",
+                \"description\": {
+                  \"version\": 1,
+                  \"type\": \"doc\",
+                  \"content\": [
+                    {
+                      \"type\": \"heading\",
+                      \"attrs\": { \"level\": 3 },
+                      \"content\": [
+                        {
+                          \"type\": \"text\",
+                          \"text\": \"브랜치 이름\"
+                        }
+                      ]
+                    },
+                    {
+                      \"type\": \"paragraph\",
+                      \"content\": [
+                        {
+                          \"type\": \"text\",
+                          \"text\": \"${{ steps.issue-parser.outputs.issueparser_branch }}\"
+                        }
+                      ]
+                    },
+                    {
+                      \"type\": \"heading\",
+                      \"attrs\": { \"level\": 3 },
+                      \"content\": [
+                        {
+                          \"type\": \"text\",
+                          \"text\": \"이슈 내용\"
+                        }
+                      ]
+                    },
+                    {
+                      \"type\": \"paragraph\",
+                      \"content\": [
+                        {
+                          \"type\": \"text\",
+                          \"text\": \"${{ steps.issue-parser.outputs.issueparser_description }}\"
+                        }
+                      ]
+                    },
+                    {
+                      \"type\": \"heading\",
+                      \"attrs\": { \"level\": 3 },
+                      \"content\": [
+                        {
+                          \"type\": \"text\",
+                          \"text\": \"TODO\"
+                        }
+                      ]
+                    },
+                    {
+                      \"type\": \"paragraph\",
+                      \"content\": [
+                        {
+                          \"type\": \"text\",
+                          \"text\": \"${{ steps.issue-parser.outputs.issueparser_tasks }}\"
+                        }
+                      ]
+                    }
+                  ]
+                }
+              }
+            }")
+      
+          echo "Response: $response"
+          issue_key=$(echo "$response" | jq -r '.key')
+          echo "key=$issue_key" >> $GITHUB_ENV
+      
+      - name: Create branch with Ticket number
+        run: |
+          TICKET_NUMBER="${{ env.key }}"
+          BRANCH_NAME="${{ steps.issue-parser.outputs.issueparser_branch }}"
+          NEW_BRANCH_NAME="feature/${TICKET_NUMBER}_$(echo ${BRANCH_NAME} | sed 's/ /-/g')"
+          git checkout -b "${NEW_BRANCH_NAME}"
+          git push origin "${NEW_BRANCH_NAME}"
+
+      - name: Update issue title
+        uses: actions-cool/issues-helper@v3
+        with:
+          actions: "update-issue"
+          token: ${{ secrets.GITHUB_TOKEN }}
+          title: "[${{ env.key }}] ${{ github.event.issue.title }}"
