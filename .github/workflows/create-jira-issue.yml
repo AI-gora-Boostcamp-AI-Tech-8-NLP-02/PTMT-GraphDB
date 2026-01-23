@@ -36,7 +36,7 @@ jobs:
       - name: Create JIRA issue
         id: create
         run: |
-          response=$(curl --request POST \
+          response=$(curl --fail --silent --request POST \
             --url "https://${JIRA_BASE_URL}/rest/api/3/issue" \
             --user "${JIRA_USER_EMAIL}:${JIRA_API_TOKEN}" \
             --header "Accept: application/json" \
@@ -63,7 +63,7 @@ jobs:
                       \"content\": [
                         {
                           \"type\": \"text\",
-                          \"text\": \"브랜치 이름\"
+                          \"text\": \"🌱 브랜치 이름(Branch)\"
                         }
                       ]
                     },
@@ -82,7 +82,7 @@ jobs:
                       \"content\": [
                         {
                           \"type\": \"text\",
-                          \"text\": \"이슈 내용\"
+                          \"text\": \"⚠️ 이슈 요약(Description)\"
                         }
                       ]
                     },
@@ -92,25 +92,6 @@ jobs:
                         {
                           \"type\": \"text\",
                           \"text\": \"${{ steps.issue-parser.outputs.issueparser_description }}\"
-                        }
-                      ]
-                    },
-                    {
-                      \"type\": \"heading\",
-                      \"attrs\": { \"level\": 3 },
-                      \"content\": [
-                        {
-                          \"type\": \"text\",
-                          \"text\": \"TODO\"
-                        }
-                      ]
-                    },
-                    {
-                      \"type\": \"paragraph\",
-                      \"content\": [
-                        {
-                          \"type\": \"text\",
-                          \"text\": \"${{ steps.issue-parser.outputs.issueparser_tasks }}\"
                         }
                       ]
                     }
