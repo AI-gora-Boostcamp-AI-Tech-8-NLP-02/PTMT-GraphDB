@@ -20,6 +20,14 @@ body:
       required: true
 
   - type: input
+    id: base
+    attributes:
+      label: '🌿 base 브랜치 이름(Base Branch)'
+      description: '새 브랜치가 분기될 base 브랜치 이름을 작성해주세요 (e.g. develop, main)'
+    validations:
+      required: true
+
+  - type: input
     id: description
     attributes:
       label: '⚠️ 이슈 요약(Description)'
