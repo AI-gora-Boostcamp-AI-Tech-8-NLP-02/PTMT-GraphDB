@@ -16,25 +16,29 @@
 {
   "id": int,
   "name": "string",
-  "category": ["string"],
-  "link": "string"
+  "categories": ["string"],
+  "link": "string", 
+  "alias": [List]
 }
 ```
 | Field    | Type         | Description             |
 | -------- | ------------ | ----------------------- |
 | id       | int          | 내부 식별자 (auto-generated) |
 | name     | string       | 지식 개념 이름                |
-| category | list[string] | 개념 분류 (도메인, 레벨 등)       |
-| link     | string       | wiki 링크 |
+| categories | list[string] | 개념 분류 (도메인, 레벨 등)       |
+| link     | string (optional)       | wiki 링크 |
+| alias    | list[string] | 동의어 |
 
 #### 2. Paper: 논문
 ```
 {
   "id": int,
-  "title": "string",
-  "category": "string",
+  "paperId": str,  // semantic scholar에서 제공해줌
+  "name": "string",
+  "categories": "string",
   "year": "string",
   "url": "string",
+  "authors": [List], 
   "abstract": "string",
   "publication": "string",
   "referenceCount": int,
@@ -44,10 +48,12 @@
 | Field          | Type              | Description     |
 | -------------- | ----------------- | --------------- |
 | id             | int               | 내부 식별자          |
+| paperId | string | semantic scholar에서 제공해줌 |
 | title          | string            | 논문 제목           |
-| category       | string            | 논문 주제/분야        |
+| categories       | string            | 논문 주제/분야        |
 | year           | string            | 출판 연도           |
-| url            | string            | Open-access URL |
+| url            | string (optional)   | Open-access URL |
+| authors | list[json] (optional) | 저자와 저자 id |
 | abstract       | string (optional) | 초록              |
 | publication    | string (optional) | 학회/저널           |
 | referenceCount | int (optional)    | 참고문헌 수          |
