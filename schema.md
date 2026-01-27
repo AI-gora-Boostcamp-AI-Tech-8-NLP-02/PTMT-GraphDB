@@ -97,7 +97,6 @@ KC -{IN}→ Paper
 {
   "id": int,
   "reason": "string",
-  "evidence": "string",
   "strength": float
 }
 ```
@@ -105,7 +104,6 @@ KC -{IN}→ Paper
 | -------- | ----------- | ---------------- |
 | id       | int         | 관계 ID            |
 | reason   | string      | 관계 설명            |
-| evidence | string      | 본문 근거 (문장, 섹션 등) |
 | strength | float (0~1) | 핵심적으로 다루는 정도     |
 
 #### 3. Paper → Paper : `REF_BY`
