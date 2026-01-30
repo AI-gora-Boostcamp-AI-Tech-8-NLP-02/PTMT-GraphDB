@@ -4,10 +4,11 @@ import pandas as pd
 import numpy as np
 from tqdm import tqdm
 import ast
+import re 
 from urllib.parse import quote
 
 from generate import build_chat_prompt, extract_json, generate_batch
-from prompts import KC_PROMPT, ALIAS_PROMPT 
+from prompts import KC_PROMPT, ALIAS_PROMPT, DESC_PROMPT
 
 # paper node 생성
 ## papers와 ref_papers를 불러와서 노드로 저장
@@ -99,6 +100,89 @@ def build_nodes_paper(papers: pd.DataFrame, ref_papers: pd.DataFrame) -> pd.Data
         .reset_index(drop=True)
     )
     return nodes_paper
+
+
+
+## paper에 description 생성
+def add_description_to_nodes(papers_df: pd.DataFrame) -> pd.DataFrame:
+    df = papers_df.copy()
+
+    df["title"] = df.get("title", "").fillna("").astype(str)
+    df["abstract"] = df.get("abstract", "").fillna("").astype(str)
+    if "categories" not in df.columns:
+        df["categories"] = [[] for _ in range(len(df))]
+
+    def _cats_to_str(cats) -> str:
+        if cats is None:
+            return ""
+        if isinstance(cats, (list, tuple, set)):
+            parts = []
+            for x in cats:
+                s = str(x).strip()
+                if s:
+                    parts.append(s)
+            return "; ".join(parts)
+        s = str(cats).strip()
+        s = re.sub(r"^\[|\]$", "", s)
+        s = s.replace("'", "").replace('"', "").strip()
+        return s
+
+    df["categories_str"] = df["categories"].apply(_cats_to_str)
+
+    chat_inputs = []
+    row_keys = []
+
+    for i, row in tqdm(df.iterrows(), total=len(df), desc="desc: build prompts"):
+        title = row["title"].strip()
+        abstract = row["abstract"].strip()
+        cats_str = row["categories_str"].strip()
+
+        system_msg = (DESC_PROMPT
+                      .replace("{INPUT_TITLE}", title)
+                      .replace("{INPUT_ABSTRACT}", abstract)
+                      .replace("{INPUT_CATEGORIES}", cats_str))
+
+        user_msg = 'Return ONLY raw JSON with key "description".'
+        chat_inputs.append(build_chat_prompt(system_msg, user_msg))
+        row_keys.append(i)
+
+    generations = generate_batch(chat_inputs)
+
+    desc_map = {}
+    raw_map = {}
+    ok_map = {}
+
+    def _clean_desc(s: str) -> str:
+        if not isinstance(s, str):
+            return ""
+        t = s.strip()
+        t = re.sub(r"\s+", " ", t).strip()
+        if t and t[-1] not in ".?!":
+            t = t + "."
+        return t
+
+    for idx, gen in tqdm(list(zip(row_keys, generations)), total=len(row_keys), desc="desc: parse outputs"):
+        raw = gen.outputs[0].text.strip()
+        parsed = extract_json(raw)
+
+        ok = isinstance(parsed, dict) and isinstance(parsed.get("description"), str)
+
+        raw_map[idx] = raw
+        ok_map[idx] = ok
+
+        if ok:
+            desc_map[idx] = _clean_desc(parsed["description"])
+        else:
+            desc_map[idx] = ""
+
+    df["description"] = df.index.map(lambda i: desc_map.get(i, ""))
+    df["desc_raw"] = df.index.map(lambda i: raw_map.get(i, ""))
+    df["desc_ok"] = df.index.map(lambda i: ok_map.get(i, False))
+
+    df.drop(columns=["categories_str"], inplace=True, errors="ignore")
+
+    return df[['paperId','url','title','publication','year','referenceCount','citationCount','authors','abstract','categories','description']]
+
 
 # paper로부터 KC 생성하는 함수
 def add_kc_to_paper_nodes(papers_df: pd.DataFrame) -> pd.DataFrame:

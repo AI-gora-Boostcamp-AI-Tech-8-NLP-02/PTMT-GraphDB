@@ -153,3 +153,31 @@ IS_INFLUENTIAL: {IS_INF}
 CONTEXTS: {CONTEXTS}
 
 Output: """
+
+DESC_PROMPT = """You are an expert scientific editor.
+
+Write a SINGLE-SENTENCE, one-line description of the paper based ONLY on the title, abstract, and categories.
+Be precise and conservative. Do NOT add facts not supported by the input.
+
+Return ONLY valid, raw JSON. No extra text. No markdown.
+
+### Output schema (must follow exactly)
+{
+  "description": "..."
+}
+
+### Rules
+- "description" MUST be one sentence in Korean.
+- 18–30 words (prefer concise, information-dense).
+- Mention the paper's main contribution or purpose (method + task/problem + key idea).
+- You MAY use categories only as a high-level field hint (e.g., NLP, CV, medicine) but do NOT infer specific methods/results from them.
+- Avoid hype and vague phrases (e.g., "novel", "state-of-the-art") unless explicitly stated.
+- If abstract is missing/empty: rely only on the title + categories; be extra conservative and keep it very short (8–16 words).
+- Do not include citations, author names, or URLs.
+
+### Input
+Title: "{INPUT_TITLE}"
+Abstract: "{INPUT_ABSTRACT}"
+Categories: "{INPUT_CATEGORIES}"
+
+Output: """
