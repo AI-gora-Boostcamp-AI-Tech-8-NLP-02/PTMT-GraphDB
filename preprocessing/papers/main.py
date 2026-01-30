@@ -8,6 +8,7 @@ import os
 from load import get_ai_papers, extract_references_from_papers_json
 from nodes import (
     build_nodes_paper,
+    add_description_to_nodes, 
     add_kc_to_paper_nodes,
     kc_to_nodes_df,
     add_alias_column,
@@ -51,6 +52,7 @@ def main():
     print("[step 3] 불러온 논문을 합쳐서 paper 노드.csv 만들기")
     nodes_paper = build_nodes_paper(raw_papers_df, ref_df)
     ## paper node 저장
+    nodes_paper = add_description_to_nodes(nodes_paper)
     nodes_paper.to_csv("../../data/test/papers_nodes_paper.csv", index=False)
 
     # 해당 paper node에서의 핵심 KC를 뽑고 alias 까지 생성
